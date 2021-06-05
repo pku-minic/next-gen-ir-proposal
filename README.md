@@ -16,7 +16,7 @@
 
 ## 现存提案
 
-> 待补充.
+* [类 LLVM 的 IR](llvm-like).
 
 ## 讨论或提交新的提案
 
@@ -25,5 +25,5 @@
 如需提交新的提案, 请您遵循以下步骤:
 
 1. fork 这个 repo.
-2. 在 fork 后的 repo 中新建描述该 IR 细节的 Markdown 文档.
+2. 在 fork 后的 repo 中新建目录, 并添加描述该 IR 细节的 Markdown 文档, 必要时还可在目录中加入其他文件.
 3. 向这个 repo 发起 pull request, 并等待 repo 维护者的 review.
