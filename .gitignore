@@ -1,0 +1,8 @@
+# macOS
+*.DS_Store
+
+# for debugging
+debug
+
+# VS Code
+.vscode
