@@ -1,28 +1,38 @@
-# The Next Generation of Eeyore/Tigger IR
+# 类 LLVM 的 IR
 
-Eeyore v2 and Tigger v2.
+我们暂且把这种 IR 叫做 IR2.
 
-## Eeyore v2
+## 符号名称
 
-### Symbol Name
+### 说明
 
-* **Named symbols**: `@name`, `name` can be any string that can be matched by `[_A-Za-z][_A-Za-z0-9]*`.
-* **Temporary symbols**: `%name`, `name` can be any string that can be matched by `[0-9]|[1-9][0-9]+|[_A-Za-z][_A-Za-z0-9]*`.
+* **具名符号**: `@name`, `name` 可以是任意可被 `[_A-Za-z][_A-Za-z0-9]*` 匹配的字符串, 也就是类 C 语言的标识符.
+* **临时符号**: `%name`, `name` 可以是任意可被 `[0-9]|[1-9][0-9]+|[_A-Za-z][_A-Za-z0-9]*` 匹配的字符串, 也就是类 C 语言的标识符或者任意数字.
 
-### Data Types
+## 类型
+
+### 语法
 
 ```ebnf
-Shape ::= "[" INT "]" {Shape};
+Shape ::= "[" INT "]" [Shape];
 ```
 
-* **32-bit signed integer**: default type.
-* **Aggregate**:
-  * `[2]`: 1-dimensional array of 32-bit signed integers which length is 2.
-  * `[2][3]`: 2-dimensional array of 32-bit signed integers which shape is `[2][3]`.
+### 说明
 
-Eeyore v2 is untyped, programmers should ensure that Eeyore v2 program do not have type issues, otherwise undefined behaviors will occur.
+IR2 的表达式或值可返回以下类型:
 
-### Values
+* **32 位有符号整数**: 默认类型.
+* **数组**: 可用 `Shape` 来描述数组的 shape, 如:
+  * `[2]`: 长度为 2 的一维 32 位有符号整数数组.
+  * `[2][3]`: 长度分别为 2 和 3 的二维 32 位有符号整数数组.
+
+简单起见, IR2 在书写时不需要标注类型声明, 程序员需要确保 IR2 在形式上不具备任何类型错误, 否则 IR2 程序的行为是未定义的.
+
+当然, IR2 在解析的时候, 解析器应当试图找出 IR2 程序中潜在的类型问题, 并报告.
+
+## 值
+
+### 语法
 
 ```ebnf
 Value ::= SYMBOL | Literal;
@@ -30,73 +40,101 @@ Literal ::= INT | Aggregate | "zeroinit"
 Aggregate ::= Shape "{" Literal {"," Literal} "}";
 ```
 
-* **32-bit signed integer**: just like `1`, `233`, etc.
-* **Symbol**: just like `@var`, `%0`, etc.
-* **Aggregate**: just like `[3] {1, 2, 3}`, `[2][2] {{1, 2}, {3, 4}}`, etc., can only initialize or be assigned to aggregate types.
-* **Zero initializer**: `zeroinit`, can initialize or be assigned to all types.
+### 说明
 
-### Symbol Definition
+* **32 位有符号整数**: 形如 `1`, `233` 等.
+* **符号引用**: 形如 `@var`, `%0` 等.
+* **数组初始化列表**: 形如 `[3] {1, 2, 3}`, `[2][2] {{1, 2}, {3, 4}}` 等, 只允许用来初始化数组类型.
+* **零初始化器**: `zeroinit`, 可以初始化任何类型.
+
+## 符号定义
+
+### 语法
 
 ```ebnf
 SymbolDef ::= SYMBOL "=" (MemoryDeclaration | GlobalMemoryDeclaration | Load | TODO);
 ```
 
-All symbols should only be defined once.
+### 说明
 
-### Memory Declaration
+所有的符号都应该只被定义一次.
+
+## 内存声明
+
+### 语法
 
 ```ebnf
 MemoryDeclaration ::= "alloc" [Shape];
 GlobalMemoryDeclaration ::= "global" "alloc" [Shape] "," Literal;
 ```
 
-e.g.
+### 示例
 
-```eeyore2
+```ir2
 @i = alloc                                // int i
 @arr = alloc [2][3]                       // int arr[2][3]
 @arr2 = global alloc [2][5], zeroinit     // int arr2[2][5] = {}
 @arr3 = global alloc [3], [3] {1, 2, 3}   // int arr3[3] = {1, 2, 3}
 ```
 
-### Memory Access
+## 内存访问
+
+### 语法
 
 ```ebnf
 Load ::= "load" Value;
 Store ::= "store" Value, SYMBOL;
 ```
 
-e.g.
+### 示例
 
-```eeyore2
+```ir2
 // x = i
 %0 = load @i
 store %0, @x
 ```
 
-### Pointer Calculation
+## 指针运算
+
+### 语法
 
 ```ebnf
 GetPointer ::= "getptr" SYMBOL, Value;
 ```
 
-e.g.
+## 示例
 
-```eeyore2
+```ir2
 // a[2][3] = 5
 %0 = getptr @a, 2
 %1 = getptr %0, 3
 store 5, %1
 ```
 
-### Binary/Unary Operation
+## 双目/单目运算
+
+### 语法
 
 ```ebnf
 BinaryExpr ::= BINARY_OP Value, Value;
 UnaryExpr ::= UNARY_OP Value;
 ```
 
-Supported operations:
+### 说明
 
-* **Binary**: `ne`, `eq`, `gt`, `lt`, `ge`, `le`, `land`, `lor`, `add`, `sub`, `mul`, `div`, `mod`.
-* **Unary**: `neg`, `lnot`.
+支持的操作:
+
+* **双目**: `ne`, `eq`, `gt`, `lt`, `ge`, `le`, `land`, `lor`, `add`, `sub`, `mul`, `div`, `mod`.
+* **单目**: `neg`, `lnot`.
+
+### 示例
+
+```ir2
+%2 = add %0, %1
+%3 = mul %0, %2
+%4 = neg %3
+```
+
+## TODO
+
+TODO
