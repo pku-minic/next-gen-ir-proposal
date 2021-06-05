@@ -6,8 +6,14 @@
 
 ### 说明
 
+符号名称可用来表示变量, 函数或标号. 符号分为以下两种:
+
 * **具名符号**: `@name`, `name` 可以是任意可被 `[_A-Za-z][_A-Za-z0-9]*` 匹配的字符串, 也就是类 C 语言的标识符.
 * **临时符号**: `%name`, `name` 可以是任意可被 `[0-9]|[1-9][0-9]+|[_A-Za-z][_A-Za-z0-9]*` 匹配的字符串, 也就是类 C 语言的标识符或者任意数字.
+
+这两种符号没有任何区别, 只是我们通常用前一种表示原语言中的变量或函数, 而用后一种类型来表示临时值或标号.
+
+让临时符号也可以包括字母和下划线的目的是, 方便大家调试. 这样你就不需要对着一堆数字来判断到底哪一个标号是 while 循环的结束了.
 
 ## 类型
 
@@ -29,6 +35,10 @@ IR2 的表达式或值可返回以下类型:
 简单起见, IR2 在书写时不需要标注类型声明, 程序员需要确保 IR2 在形式上不具备任何类型错误, 否则 IR2 程序的行为是未定义的.
 
 当然, IR2 在解析的时候, 解析器应当试图找出 IR2 程序中潜在的类型问题, 并报告.
+
+> **注:** 不标注类型声明的行为只在现阶段的课程中适用, 因为现阶段课程所需要实现的原语言并不打算支持除 32 位无符号整数和数组外的其他类型.
+>
+> 为了可持续发展, 我们是否应该牺牲一部分 IR 的简洁性?
 
 ## 值
 
@@ -83,7 +93,7 @@ GlobalMemoryDeclaration ::= "global" "alloc" [Shape] "," Literal;
 
 ```ebnf
 Load ::= "load" Value;
-Store ::= "store" Value, SYMBOL;
+Store ::= "store" Value "," SYMBOL;
 ```
 
 ### 示例
@@ -99,7 +109,7 @@ store %0, @x
 ### 语法
 
 ```ebnf
-GetPointer ::= "getptr" SYMBOL, Value;
+GetPointer ::= "getptr" SYMBOL "," Value;
 ```
 
 ## 示例
@@ -116,7 +126,7 @@ store 5, %1
 ### 语法
 
 ```ebnf
-BinaryExpr ::= BINARY_OP Value, Value;
+BinaryExpr ::= BINARY_OP Value "," Value;
 UnaryExpr ::= UNARY_OP Value;
 ```
 
@@ -137,4 +147,8 @@ UnaryExpr ::= UNARY_OP Value;
 
 ## TODO
 
-TODO
+没写完, 有空再写, 慢慢来嘛, 不着急.
+
+实验室蚊子太多, 不宜久留.
+
+我先 TODO 为敬.
