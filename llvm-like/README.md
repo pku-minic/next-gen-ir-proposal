@@ -62,7 +62,7 @@ Aggregate ::= Shape "{" Initializer {"," Initializer} "}";
 ### 语法
 
 ```ebnf
-SymbolDef ::= SYMBOL "=" (MemoryDeclaration | Load | GetPointer | BinaryExpr | UnaryExpr | FunCall | GetArg);
+SymbolDef ::= SYMBOL "=" (MemoryDeclaration | Load | GetPointer | BinaryExpr | UnaryExpr | FunCall);
 GlobalSymbolDef ::= "global" SYMBOL "=" GlobalMemoryDeclaration;
 ```
 
@@ -224,10 +224,10 @@ ret %0
 ### 语法
 
 ```ebnf
-FunDef ::= "fun" SYMBOL "(" INT ")" "{" FunBody "}";
+FunDef ::= "fun" SYMBOL "(" [FunArgs] ")" "{" FunBody "}";
+FunArgs ::= SYMBOL {"," SYMBOL};
 FunBody ::= {Statement};
 Statement ::= SymbolDef | Store | Branch | Jump | FunCall | Return;
-GetArg ::= "getarg" INT;
 ```
 
 > **TODO:** 是否要强制要求大家按照基本块的方式来组织代码?
@@ -240,39 +240,30 @@ GetArg ::= "getarg" INT;
 
 ### 说明
 
-`FunDef` 用来定义一个函数, 其中的 `INT` 表示函数参数的个数.
+`FunDef` 用来定义一个函数, 其中的 `FunArgs` 用来声明参数的名称.
 
-`GetArg` 用来获取函数的某个参数.
+函数参数的类型可能是值, 也可能是一个数组的指针. 前者可以直接用, 后者只能参与内存访问或指针运算.
 
 ### 示例
 
 ```ir2
 global @arr = alloc [10], zeroinit    // int arr[10] = {};
 
-fun @func (2) {                       // int func(int a, int b) {
+fun @func (@a, @b) {                  // int func(int a, int b) {
 %entry:
-  @a = alloc
-  @b = alloc
   %ret = alloc
-
-  %0 = getarg 0
-  store %0, @a
-  %1 = getarg 1
-  store %1, @a
   jump %2
 
 %2:
-  %3 = load @a                        //   return arr[a] + b;
-  %4 = getptr @arr, %3
-  %5 = load %4
-  %6 = load @b
-  %7 = add %5, %6
-  store %7, %ret
+  %0 = getptr @arr, @a                //   return arr[a] + b;
+  %1 = load %0
+  %2 = add %1, @b
+  store %2, %ret
   jump %end
 
 %end:
-  %8 = load %ret
-  ret %8
+  %3 = load %ret
+  ret %3
 }                                     // }
 ```
 
