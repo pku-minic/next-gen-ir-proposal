@@ -320,29 +320,44 @@ Annotation ::= AnnoPair {";" AnnoPair} [";"];
 AnnoPair ::= AnnoName [":" AnnoValue];
 ```
 
-注解由若干个 `AnnoPair` 构成, 中间以分号分割, 也可以以分号结尾. `AnnoPair` 包含注解的名称和注解的值, 有些注解只有名称而没有值.
+注解由若干个 `AnnoPair` 构成, 中间以分号分隔, 也可以以分号结尾. `AnnoPair` 包含注解的名称和注解的值, 有些注解只有名称而没有值.
 
-支持的注解:
+`AnnoName` 实际上是一个字符串, 其中不允许出现任何空白符或其他控制字符. `AnnoName` 的命名格式并无特殊规定, 你愿意的话甚至可以用中文或其他 unicode 字符来表示, 但建议使用 [`kebab-case`](https://en.wikipedia.org/wiki/Letter_case#Special_case_styles).
 
-| 名称  | 值                        | 含义                            |
-| --    | --                        | --                              |
-| pred  | 基本块标号列表, 逗号分隔  | 标记基本块的前驱                |
-| succ  | 基本块标号, 逗号分隔      | 标记基本块的后继                |
-| type  | 类型声明                  | 标记 IR 表达式的类型            |
-| src   | 文件名                    | 标记 IR 文件对应的源代码文件    |
-| line  | 行号                      | 标记 IR 对应的源代码文件的行数  |
+`AnnoValue` 实际上也是一个字符串. 默认情况下, 字符串从 `AnnoName` 后的冒号处开始, 到分号处或注解结束处结束, 首尾空白符会被忽略.
 
-此外, 用户可自定义注解, 但 IR2 的标准解析器将不负责解析这些注解.
+考虑到用户可能会在 `AnnoValue` 中写各种稀奇古怪的东西, `AnnoValue` 还支持双引号形式的字符串, 形式同 C/C++ 的字符串. 该形式下, `AnnoValue` 可包含如下转义字符:
+
+* **换行**: `\n`
+* **回车**: `\r`
+* **tab**: `\t`
+* **反斜杠**: `\\`
+* **双引号**: `\"`
+* **ASCII**: `\x00` - `\xff`
+
+支持的标准注解:
+
+| 名称    | 值                        | 含义                              |
+| --      | --                        | --                                |
+| pred    | 基本块标号列表, 逗号分隔  | 标记基本块的前驱                  |
+| succ    | 基本块标号, 逗号分隔      | 标记基本块的后继                  |
+| type    | 类型声明                  | 标记 IR 表达式的类型              |
+| src     | 文件名                    | 标记 IR 文件对应的源代码文件      |
+| line    | 行号                      | 标记 IR 对应的源代码文件的行数    |
+| version | 版本号                    | 标记 IR 文件对应的 IR 标准的版本  |
+
+此外, 用户可自定义非标准注解, IR2 的标准解析器将不负责解析这些注解.
 
 ### 示例
 
 ```ir2
+//! version: 0.0.1
 //! src: example.c
 
-//! type: i32[10], line: 1
+//! type: i32[10]; line: 1
 global @arr = alloc [10], zeroinit
 
-//! type: i32(i32, i32), line 2
+//! type: i32(i32, i32); line: 2
 fun @func (@a, @b) {
 %entry:
   %ret /*! type: i32* */ = alloc
@@ -363,4 +378,8 @@ fun @func (@a, @b) {
   %3 /*! type: i32 */ = load %ret
   ret %3
 }
+
+/*!
+  user-defined-annotation: "  complicated strings\n\nhello?";
+*/
 ```
