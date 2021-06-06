@@ -226,23 +226,19 @@ ret %0
 ```ebnf
 FunDef ::= "fun" SYMBOL "(" [FunArgs] ")" "{" FunBody "}";
 FunArgs ::= SYMBOL {"," SYMBOL};
-FunBody ::= {Statement};
-Statement ::= SymbolDef | Store | Branch | Jump | FunCall | Return;
+FunBody ::= {Block};
+Block ::= SYMBOL ":" {Statement} EndStatement;
+Statement ::= SymbolDef | Store | FunCall;
+EndStatement ::= Branch | Jump | Return;
 ```
-
-> **TODO:** 是否要强制要求大家按照基本块的方式来组织代码?
->
-> 这样, 每个基本块的结尾就必须是 `Branch`, `Jump` 或者 `Return`.
->
-> 而且, `Branch` 的双目标设计也会变得有意义起来, 同时在 IR 上进行优化也会更加方便.
->
-> IR 也可以兼容 SSA 形式.
 
 ### 说明
 
 `FunDef` 用来定义一个函数, 其中的 `FunArgs` 用来声明参数的名称.
 
 函数参数的类型可能是值, 也可能是一个数组的指针. 前者可以直接用, 后者只能参与内存访问或指针运算.
+
+`Block` 表示基本块. 所有的基本块必须具备一个标号, 并且由 `Branch`, `Jump` 或者 `Return` 结尾.
 
 ### 示例
 
