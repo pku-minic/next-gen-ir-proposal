@@ -62,7 +62,7 @@ Aggregate ::= Shape "{" Initializer {"," Initializer} "}";
 ### 语法
 
 ```ebnf
-SymbolDef ::= SYMBOL "=" (MemoryDeclaration | Load | GetPointer | BinaryExpr | UnaryExpr | FunCall);
+SymbolDef ::= SYMBOL "=" (MemoryDeclaration | Load | GetPointer | BinaryExpr | UnaryExpr | FunCall | Phi);
 GlobalSymbolDef ::= "global" SYMBOL "=" GlobalMemoryDeclaration;
 ```
 
@@ -263,9 +263,49 @@ fun @func (@a, @b) {                  // int func(int a, int b) {
 }                                     // }
 ```
 
+## Phi 函数
+
+### 语法
+
+```ir2
+Phi ::= "phi" PhiOperand {"," PhiOperand};
+PhiOperand ::= "(" Value, SYMBOL ")";
+```
+
+### 说明
+
+不具备 Phi 函数的 IR2 已经可以足够作为编译器的 IR 使用了, 但为了让 IR2 兼容 SSA 形式, 我们可以让其支持 Phi 函数.
+
+IR2 支持 SSA 形式, 但这并非是必选内容. 为了实现更多更强大的优化, 你可以选择将 IR2 转换到 SSA 形式. 但我觉得这部分内容不应该放在本科编译原理的课程实践中, 也许可以针对本科生再开一门和编译优化相关的课程.
+
+`PhiOperand` 是一个二元组, 第一个元素表示一个值, 第二个元素表示这个值来自哪一个基本块.
+
+语义上, `Phi` 必须位于某个基本块的开头, 其中 `PhiOperand` 的数量必须和基本块前驱的数量一致, 且 `PhiOperand` 所引用的所有基本块必须和其所在基本块的前驱一一对应.
+
+### 示例
+
+```ir2
+// return a > 10 ? a + 5 : a - 7
+%if_begin:
+  %cond = gt %a_0, 10
+  br %cond, %if_then, %if_else
+
+%if_then:
+  %a_1 = add %a_0, 5
+  jump %if_end
+
+%if_else:
+  %a_2 = sub %a_0, 7
+  jump %if_end
+
+%if_end:
+  %a_3 = phi (%a_1, %if_then), (%a_2, %if_else)
+  ret %a_3
+```
+
 ## TODO
 
-> Phi, 注释和注解.
+> 注释和注解.
 
 没写完, 有空再写, 慢慢来嘛, 不着急.
 
