@@ -276,7 +276,7 @@ PhiOperand ::= "(" Value, SYMBOL ")";
 
 ### 说明
 
-不具备 Phi 函数的 IR2 已经可以足够作为编译器的 IR 使用了, 但为了让 IR2 兼容 SSA 形式, 我们可以让其支持 Phi 函数.
+不具备 Phi 函数的 IR2 已经足够作为一个编译器的 IR 使用了, 但为了让 IR2 兼容 SSA 形式, 我们可以让其支持 Phi 函数.
 
 IR2 支持 SSA 形式, 但这并非是必选内容. 为了实现更多更强大的优化, 你可以选择将 IR2 转换到 SSA 形式. 但我觉得这部分内容不应该放在本科编译原理的课程实践中, 也许可以针对本科生再开一门和编译优化相关的课程.
 
@@ -322,7 +322,7 @@ AnnoPair ::= AnnoName [":" AnnoValue];
 
 注解由若干个 `AnnoPair` 构成, 中间以分号分隔, 也可以以分号结尾. `AnnoPair` 包含注解的名称和注解的值, 有些注解只有名称而没有值.
 
-`AnnoName` 实际上是一个字符串, 其中不允许出现任何空白符或其他控制字符. `AnnoName` 的命名格式并无特殊规定, 你愿意的话甚至可以用中文或其他 unicode 字符来表示, 但建议使用 [`kebab-case`](https://en.wikipedia.org/wiki/Letter_case#Special_case_styles).
+`AnnoName` 实际上是一个字符串, 其中不允许出现任何空白符或其他控制字符. `AnnoName` 的命名格式并无特殊规定, 你愿意的话甚至可以用中文或其他 unicode 字符来表示, 但建议使用 [kebab-case](https://en.wikipedia.org/wiki/Letter_case#Special_case_styles).
 
 `AnnoValue` 实际上也是一个字符串. 默认情况下, 字符串从 `AnnoName` 后的冒号处开始, 到分号处或注解结束处结束, 首尾空白符会被忽略.
 
@@ -333,7 +333,7 @@ AnnoPair ::= AnnoName [":" AnnoValue];
 * **tab**: `\t`
 * **反斜杠**: `\\`
 * **双引号**: `\"`
-* **ASCII**: `\x00` - `\xff`
+* **任意字节**: `\x00` - `\xff`
 
 支持的标准注解:
 
