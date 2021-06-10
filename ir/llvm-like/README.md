@@ -1,4 +1,4 @@
-# 类 LLVM 的 IR
+# 类 LLVM 的 IR, v0.1-d
 
 我们暂且把这种 IR 叫做 IR2.
 
