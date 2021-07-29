@@ -97,8 +97,8 @@ global @arr3 = alloc [3], [3] {1, 2, 3}   // int arr3[3] = {1, 2, 3}
 ### 语法
 
 ```ebnf
-Load ::= "load" Value;
-Store ::= "store" Initializer "," SYMBOL;
+Load ::= "load" SYMBOL;
+Store ::= "store" Value "," SYMBOL;
 ```
 
 ### 示例
@@ -160,8 +160,8 @@ UnaryExpr ::= UNARY_OP Value;
 
 支持的操作:
 
-* **双目**: `ne`, `eq`, `gt`, `lt`, `ge`, `le`, `land`, `lor`, `add`, `sub`, `mul`, `div`, `mod`.
-* **单目**: `neg`, `lnot`.
+* **双目**: `ne`, `eq`, `gt`, `lt`, `ge`, `le`, `add`, `sub`, `mul`, `div`, `mod`, `and`, `or`, `xor`, `shl`, `shr`, `sar`.
+* **单目**: `neg`, `not`.
 
 ### 示例
 
