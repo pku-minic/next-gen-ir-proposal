@@ -47,7 +47,7 @@ IR2 的表达式或值可返回以下类型:
 ### 语法
 
 ```ebnf
-Value ::= SYMBOL | INT;
+Value ::= SYMBOL | INT | UNDEF;
 Initializer ::= INT | Aggregate | "zeroinit";
 Aggregate ::= Shape "{" Initializer {"," Initializer} "}";
 ```
@@ -58,6 +58,7 @@ Aggregate ::= Shape "{" Initializer {"," Initializer} "}";
 * **符号引用**: 形如 `@var`, `%0` 等.
 * **数组初始化列表**: 形如 `[3] {1, 2, 3}`, `[2][2] {[2] {1, 2}, [2] {3, 4}}` 等, 只允许用来初始化数组类型.
 * **零初始化器**: `zeroinit`, 可以初始化任何类型.
+* **未定义值**: `undef`, 标记某处的值未定义. 当变量未初始化时, 试图将 IR 提升至 SSA 形式之后可能会出现 `undef`.
 
 ## 符号定义
 
@@ -98,7 +99,7 @@ global @arr3 = alloc [3], [3] {1, 2, 3}   // int arr3[3] = {1, 2, 3}
 
 ```ebnf
 Load ::= "load" SYMBOL;
-Store ::= "store" Value "," SYMBOL;
+Store ::= "store" (Value | Initializer) "," SYMBOL;
 ```
 
 ### 示例
