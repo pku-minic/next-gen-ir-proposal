@@ -47,7 +47,7 @@ IR2 的表达式或值可返回以下类型:
 ### 语法
 
 ```ebnf
-Value ::= SYMBOL | INT | UNDEF;
+Value ::= SYMBOL | INT | "undef";
 Initializer ::= INT | Aggregate | "zeroinit";
 Aggregate ::= Shape "{" Initializer {"," Initializer} "}";
 ```
