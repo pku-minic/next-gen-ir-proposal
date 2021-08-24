@@ -20,6 +20,8 @@
 ### 语法
 
 ```ebnf
+Type ::= "i32" | "unit" | ArrayType | PointerType | FunType;
+ArrayType ::= "[" Type ";" INT "]";
 Shape ::= "[" INT "]" [Shape];
 ```
 
@@ -29,19 +31,13 @@ IR2 的表达式或值可返回以下类型:
 
 * **32 位有符号整数**: 默认类型, 可被表示为 `i32`.
 * **单元类型**: 只返回一个值 (即单元值), 相当于 C/C++ 里的 `void` 或者 Rust 里的 `()`, 可被表示为 `unit`.
-* **数组**: 可被表示为 `BaseType` + `Shape` 的形式, 如 `i32[2][3]`. `Shape` 用来描述数组的 shape, 如:
-  * `[2]`: 长度为 2 的一维 32 位有符号整数数组.
-  * `[2][3]`: 长度分别为 2 和 3 的二维 32 位有符号整数数组.
+* **数组**: 可被表示为 `[BaseType; Length]` 的形式, 如 `[i32; 2]`. `BaseType` 用来描述数组元素的类型, `Length` 用来表示数组长度, 如:
+  * `[i32; 2]`: 长度为 2 的数组, 数组元素类型为 32 位有符号整数.
+  * `[[i32; 3]; 2]`: 长度为 2 的数组, 数组元素类型为一个长度为 3 的 32 位有符号数组, 相当于 C/C++ 中的 `int[2][3]`.
 * **指针**: 可被表示为 `BaseType` + `*` 的形式, 如 `i32*`, `i32**`.
 * **函数**: 可被表示为 `BaseType(BaseType, ...)` 的形式, 如 `i32(i32, i32)`, `unit()`, 后者表示的函数不具备返回值.
 
-简单起见, IR2 在书写时不需要标注类型声明, 程序员需要确保 IR2 在形式上不具备任何类型错误, 否则 IR2 程序的行为是未定义的.
-
-当然, IR2 在解析的时候, 解析器应当试图找出 IR2 程序中潜在的类型问题, 并报告.
-
-> **TODO:** 不标注类型声明的行为只在现阶段的课程中适用, 因为现阶段课程所需要实现的原语言并不打算支持除 32 位有符号整数和数组外的其他类型.
->
-> 为了可持续发展, 我们是否应该牺牲一部分 IR 的简洁性?
+IR2 是一种强类型 IR, 在书写时只需要为内存分配/函数参数/函数返回值进行类型标注, 其余值的类型将由解析器自动推断. 此外, 在解析 IR2 时解析器应当检查 IR 的类型, 如发现类型问题, 应报错并退出.
 
 ## 值
 
@@ -49,15 +45,15 @@ IR2 的表达式或值可返回以下类型:
 
 ```ebnf
 Value ::= SYMBOL | INT | "undef";
-Initializer ::= INT | Aggregate | "zeroinit";
-Aggregate ::= Shape "{" Initializer {"," Initializer} "}";
+Initializer ::= INT | "undef" | Aggregate | "zeroinit";
+Aggregate ::= "{" Initializer {"," Initializer} "}";
 ```
 
 ### 说明
 
 * **32 位有符号整数**: 形如 `1`, `233` 等.
 * **符号引用**: 形如 `@var`, `%0` 等.
-* **数组初始化列表**: 形如 `[3] {1, 2, 3}`, `[2][2] {[2] {1, 2}, [2] {3, 4}}` 等, 只允许用来初始化数组类型.
+* **数组初始化列表**: 形如 `{1, 2, 3}`, `{{1, 2}, {3, 4}}` 等, 只允许用来初始化数组类型. 初始化列表中不能出现符号引用.
 * **零初始化器**: `zeroinit`, 可以初始化任何类型.
 * **未定义值**: `undef`, 标记某处的值未定义. 当变量未初始化时, 试图将 IR 提升至 SSA 形式之后可能会出现 `undef`.
 
@@ -74,24 +70,28 @@ GlobalSymbolDef ::= "global" SYMBOL "=" GlobalMemoryDeclaration;
 
 `SymbolDef` 只能出现在函数内部, `GlobalSymbolDef` 只能出现在函数外部.
 
-所有的符号都应该只被定义一次.
+全局的符号不能和其他全局符号同名, 局部的符号 (位于函数内部的符号) 不能和其他全局符号以及局部符号同名. 上述规则对具名符号和临时符号都适用.
+
+简单起见, IR 生成器可以允许用户定义重名的符号, 此时生成器需要自动对重名的符号进行换名, 例如将符号 `%name` 改为 `%name_1`. 这样, 用户就可以将所有的 `while` 出口都标记成 `%while_exit` 而不必担心不同出口之间的名字会冲突了.
+
+当然上述自动换名的约定只在用户使用 IR 生成器生成 IR 时有效, 若用户决定直接生成文本形式的 IR, 则需要自己确保所有符号的名字互不冲突.
 
 ## 内存声明
 
 ### 语法
 
 ```ebnf
-MemoryDeclaration ::= "alloc" [Shape];
-GlobalMemoryDeclaration ::= "alloc" [Shape] "," Initializer;
+MemoryDeclaration ::= "alloc" Type;
+GlobalMemoryDeclaration ::= "alloc" Type "," Initializer;
 ```
 
 ### 示例
 
 ```ir2
-@i = alloc                                // int i
-@arr = alloc [2][3]                       // int arr[2][3]
-global @arr2 = alloc [2][5], zeroinit     // int arr2[2][5] = {}
-global @arr3 = alloc [3], [3] {1, 2, 3}   // int arr3[3] = {1, 2, 3}
+@i = alloc                                    // int i
+@arr = alloc [[i32; 3]; 2]                    // int arr[2][3]
+global @arr2 = alloc [[i32; 5]; 2], zeroinit  // int arr2[2][5] = {}
+global @arr3 = alloc [i32; 3], {1, 2, 3}      // int arr3[3] = {1, 2, 3}
 ```
 
 ## 内存访问
@@ -228,8 +228,8 @@ ret %0
 ### 语法
 
 ```ebnf
-FunDef ::= "fun" SYMBOL "(" [FunArgs] ")" "{" FunBody "}";
-FunArgs ::= SYMBOL {"," SYMBOL};
+FunDef ::= "fun" SYMBOL "(" [FunArgs] ")" ":" Type "{" FunBody "}";
+FunArgs ::= SYMBOL ":" Type {"," SYMBOL ":" Type};
 FunBody ::= {Block};
 Block ::= SYMBOL ":" {Statement} EndStatement;
 Statement ::= SymbolDef | Store | FunCall;
@@ -247,11 +247,11 @@ EndStatement ::= Branch | Jump | Return;
 ### 示例
 
 ```ir2
-global @arr = alloc [10], zeroinit    // int arr[10] = {};
+global @arr = alloc [i32; 10], zeroinit // int arr[10] = {};
 
-fun @func (@a, @b) {                  // int func(int a, int b) {
+fun @func (@a: i32, @b: i32): i32 {     // int func(int a, int b) {
 %entry:
-  %ret = alloc
+  %ret = alloc i32
   jump %2
 
 %2:
@@ -366,13 +366,13 @@ AnnoPair ::= AnnoName [":" AnnoValue];
 //! version: 0.0.1
 //! src: example.c
 
-//! type: i32[10]; line: 1
-global @arr = alloc [10], zeroinit
+//! type: [i32; 10]; line: 1
+global @arr = alloc [i32; 10], zeroinit
 
 //! type: i32(i32, i32); line: 2
-fun @func (@a, @b) {
+fun @func (@a: i32, @b: i32): i32 {
 %entry:
-  %ret /*! type: i32* */ = alloc
+  %ret /*! type: i32* */ = alloc i32
   jump %2
 
 //! pred: %entry
