@@ -87,7 +87,7 @@ GlobalMemoryDeclaration ::= "alloc" Type "," Initializer;
 
 ### 示例
 
-```ir2
+```koopa
 @i = alloc                                    // int i
 @arr = alloc [[i32, 3], 2]                    // int arr[2][3]
 global @arr2 = alloc [[i32, 5], 2], zeroinit  // int arr2[2][5] = {}
@@ -105,7 +105,7 @@ Store ::= "store" (Value | Initializer) "," SYMBOL;
 
 ### 示例
 
-```ir2
+```koopa
 // x = i
 %0 = load @i
 store %0, @x
@@ -129,7 +129,7 @@ GetPointer ::= "getptr" SYMBOL "," Value ["," INT];
 
 普通的数组:
 
-```ir2
+```koopa
 // int a[10][9];
 // a[2][3] = 5
 %0 = getptr @a, 2, 9
@@ -139,7 +139,7 @@ store 5, %1
 
 作为参数, 省略第一维长度的数组:
 
-```ir2
+```koopa
 // int a[][9]
 // a[2][3] = 5;
 %0 = getptr @a, 2, 9
@@ -167,7 +167,7 @@ UnaryExpr ::= UNARY_OP Value;
 
 ### 示例
 
-```ir2
+```koopa
 %2 = add %0, %1
 %3 = mul %0, %2
 %4 = neg %3
@@ -190,7 +190,7 @@ Jump ::= "jump" SYMBOL;
 
 ### 示例
 
-```ir2
+```koopa
 %while_entry:
   %cond = lt %0, %1                   // while (%0 < %1)
   br %cond, %while_body, %while_end   // {
@@ -217,7 +217,7 @@ Return ::= "ret" [Value];
 
 ### 示例
 
-```ir2
+```koopa
 %0 = call @getint ()
 call @putint (%0)
 ret %0
@@ -246,7 +246,7 @@ EndStatement ::= Branch | Jump | Return;
 
 ### 示例
 
-```ir2
+```koopa
 global @arr = alloc [i32, 10], zeroinit   // int arr[10] = {};
 
 fun @func (@a: i32, @b: i32): i32 {       // int func(int a, int b) {
@@ -288,7 +288,7 @@ Koopa 支持 SSA 形式, 但这并非是必选内容. 为了实现更多更强�
 
 ### 示例
 
-```ir2
+```koopa
 // return a > 10 ? a + 5 : a - 7
 %if_begin:
   %cond = gt %a_0, 10
@@ -362,7 +362,7 @@ AnnoPair ::= AnnoName [":" AnnoValue];
 
 ### 示例
 
-```ir2
+```koopa
 //! version: 0.0.1
 //! src: example.c
 
