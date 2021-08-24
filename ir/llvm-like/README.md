@@ -20,9 +20,10 @@
 ### 语法
 
 ```ebnf
-Type ::= "i32" | "unit" | ArrayType | PointerType | FunType;
-ArrayType ::= "[" Type ";" INT "]";
-Shape ::= "[" INT "]" [Shape];
+Type ::= "i32" | ArrayType | PointerType | FunType;
+ArrayType ::= "[" Type "," INT "]";
+PointerType ::= Type "*";
+FunType ::= "(" [Type {"," Type}] ")" [":" Type];
 ```
 
 ### 说明
@@ -30,12 +31,11 @@ Shape ::= "[" INT "]" [Shape];
 Koopa 的函数/表达式/值可具备以下类型:
 
 * **32 位有符号整数**: 默认类型, 可被表示为 `i32`.
-* **单元类型**: 只返回一个值 (即单元值), 相当于 C/C++ 里的 `void` 或者 Rust 里的 `()`, 可被表示为 `unit`.
-* **数组**: 可被表示为 `[BaseType; Length]` 的形式, 如 `[i32; 2]`. `BaseType` 用来描述数组元素的类型, `Length` 用来表示数组长度, 如:
-  * `[i32; 2]`: 长度为 2 的数组, 数组元素类型为 32 位有符号整数.
-  * `[[i32; 3]; 2]`: 长度为 2 的数组, 数组元素类型为一个长度为 3 的 32 位有符号数组, 相当于 C/C++ 中的 `int[2][3]`.
+* **数组**: 可被表示为 `[BaseType, Length]` 的形式, 如 `[i32, 2]`. `BaseType` 用来描述数组元素的类型, `Length` 用来表示数组长度, 如:
+  * `[i32, 2]`: 长度为 2 的数组, 数组元素类型为 32 位有符号整数.
+  * `[[i32, 3], 2]`: 长度为 2 的数组, 数组元素类型为一个长度为 3 的 32 位有符号数组, 相当于 C/C++ 中的 `int[2][3]`.
 * **指针**: 可被表示为 `BaseType` + `*` 的形式, 如 `i32*`, `i32**`.
-* **函数**: 可被表示为 `BaseType(BaseType, ...)` 的形式, 如 `i32(i32, i32)`, `unit()`, 后者表示的函数不具备返回值.
+* **函数**: 可被表示为 `(BaseType, ...): BaseType` 或 `(BaseType, ...)` 的形式, 如 `(i32, i32): i32`, `()`, 后者表示的函数不具备返回值.
 
 Koopa 是一种强类型 IR, 在书写时只需要为内存分配/函数参数/函数返回值进行类型标注, 其余值的类型将由解析器自动推断. 此外, 在解析 Koopa 时解析器应当检查 IR 的类型, 如发现类型问题, 应报错并退出.
 
@@ -89,9 +89,9 @@ GlobalMemoryDeclaration ::= "alloc" Type "," Initializer;
 
 ```ir2
 @i = alloc                                    // int i
-@arr = alloc [[i32; 3]; 2]                    // int arr[2][3]
-global @arr2 = alloc [[i32; 5]; 2], zeroinit  // int arr2[2][5] = {}
-global @arr3 = alloc [i32; 3], {1, 2, 3}      // int arr3[3] = {1, 2, 3}
+@arr = alloc [[i32, 3], 2]                    // int arr[2][3]
+global @arr2 = alloc [[i32, 5], 2], zeroinit  // int arr2[2][5] = {}
+global @arr3 = alloc [i32, 3], {1, 2, 3}      // int arr3[3] = {1, 2, 3}
 ```
 
 ## 内存访问
@@ -247,15 +247,15 @@ EndStatement ::= Branch | Jump | Return;
 ### 示例
 
 ```ir2
-global @arr = alloc [i32; 10], zeroinit // int arr[10] = {};
+global @arr = alloc [i32, 10], zeroinit   // int arr[10] = {};
 
-fun @func (@a: i32, @b: i32): i32 {     // int func(int a, int b) {
+fun @func (@a: i32, @b: i32): i32 {       // int func(int a, int b) {
 %entry:
   %ret = alloc i32
   jump %2
 
 %2:
-  %0 = getptr @arr, @a                //   return arr[a] + b;
+  %0 = getptr @arr, @a                    //   return arr[a] + b;
   %1 = load %0
   %2 = add %1, @b
   store %2, %ret
@@ -264,7 +264,7 @@ fun @func (@a: i32, @b: i32): i32 {     // int func(int a, int b) {
 %end:
   %3 = load %ret
   ret %3
-}                                     // }
+}                                         // }
 ```
 
 ## Phi 函数
@@ -366,10 +366,10 @@ AnnoPair ::= AnnoName [":" AnnoValue];
 //! version: 0.0.1
 //! src: example.c
 
-//! type: [i32; 10]; line: 1
-global @arr = alloc [i32; 10], zeroinit
+//! type: [i32, 10]; line: 1
+global @arr = alloc [i32, 10], zeroinit
 
-//! type: i32(i32, i32); line: 2
+//! type: (i32, i32): i32; line: 2
 fun @func (@a: i32, @b: i32): i32 {
 %entry:
   %ret /*! type: i32* */ = alloc i32
