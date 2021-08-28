@@ -267,6 +267,35 @@ fun @func (@a: i32, @b: i32): i32 {       // int func(int a, int b) {
 }                                         // }
 ```
 
+## 函数声明
+
+### 语法
+
+```ebnf
+FunDecl ::= "decl" SYMBOL "(" [FunDeclArgs] ")" ":" Type;
+FunDeclArgs ::= Type {"," Type};
+```
+
+### 说明
+
+`FunDecl` 可以声明一个函数. 此处的 “声明” 与 C/C++ 里的 `extern` 声明含义类似, 指这个函数点定义并不在当前文件内, 而在另外的文件中. 如果当前文件表示的程序需要调用另一个文件中定义的函数, 则必须在 Koopa IR 中显式的写明这个函数的声明.
+
+SysY 的库函数, 如 `getint`/`putint`, 就是一类典型的需要被声明的函数.
+
+### 示例
+
+```koopa
+decl getint(): i32
+decl putint(i32)
+
+fun @main(): i32 {
+%entry:
+  %0 = call getint()
+  call putint(%0)
+  ret 0
+}
+```
+
 ## Phi 函数
 
 ### 语法
