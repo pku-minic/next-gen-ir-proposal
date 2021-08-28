@@ -285,13 +285,13 @@ SysY 的库函数, 如 `getint`/`putint`, 就是一类典型的需要被声明�
 ### 示例
 
 ```koopa
-decl getint(): i32
-decl putint(i32)
+decl @getint(): i32
+decl @putint(i32)
 
 fun @main(): i32 {
 %entry:
-  %0 = call getint()
-  call putint(%0)
+  %0 = call @getint()
+  call @putint(%0)
   ret 0
 }
 ```
