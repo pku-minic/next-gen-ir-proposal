@@ -37,7 +37,7 @@ Koopa 的函数/表达式/值可具备以下类型:
 * **指针**: 可被表示为 `*` + `BaseType` 的形式, 如 `*i32`, `**i32`.
 * **函数**: 可被表示为 `(BaseType, ...): BaseType` 或 `(BaseType, ...)` 的形式, 如 `(i32, i32): i32`, `()`, 后者表示的函数不具备返回值.
 
-Koopa 是一种强类型 IR, 在书写时只需要为内存分配/函数参数/函数返回值进行类型标注, 其余值的类型将由解析器自动推断. 此外, 在解析 Koopa 时解析器应当检查 IR 的类型, 如发现类型问题, 应报错并退出.
+Koopa 是一种强类型 IR, 在书写时只需要为内存分配/函数参数/函数返回值/Phi 函数进行类型标注, 其余值的类型将由解析器自动推断. 此外, 在解析 Koopa 时解析器应当检查 IR 的类型, 如发现类型问题, 应报错并退出.
 
 ## 值
 
@@ -301,7 +301,7 @@ fun @main(): i32 {
 ### 语法
 
 ```ebnf
-Phi ::= "phi" PhiOperand {"," PhiOperand};
+Phi ::= "phi" Type PhiOperand {"," PhiOperand};
 PhiOperand ::= "(" Value, SYMBOL ")";
 ```
 
@@ -332,7 +332,7 @@ Koopa 支持 SSA 形式, 但这并非是必选内容. 为了实现更多更强�
   jump %if_end
 
 %if_end:
-  %a_3 = phi (%a_1, %if_then), (%a_2, %if_else)
+  %a_3 = phi i32 (%a_1, %if_then), (%a_2, %if_else)
   ret %a_3
 ```
 
