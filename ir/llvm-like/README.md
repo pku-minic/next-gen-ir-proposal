@@ -85,10 +85,28 @@ MemoryDeclaration ::= "alloc" Type;
 GlobalMemoryDeclaration ::= "alloc" Type "," Initializer;
 ```
 
+### 类型推断规则
+
+使用内存声明时必须标注类型, 该类型指的是申请得到的内存可存储的元素的类型.
+
+需要注意的是, 申请得到的内存的类型并不是标注的类型, 而是标注类型的指针, 例如:
+
+```koopa
+@a = alloc i32
+```
+
+`@a` 对应的内存可存储一个 `i32` 类型的数据, 但 `@a` 本身指的是那块内存, 所以 `@a` 的类型是 `*i32`.
+
+这点和 C/C++ 的逻辑类似, 对应到 C 语言表示的伪代码则为:
+
+```c
+int *a = (int *)malloc(sizeof(int));
+```
+
 ### 示例
 
 ```koopa
-@i = alloc                                    // int i
+@i = alloc i32                                // int i
 @arr = alloc [[i32, 3], 2]                    // int arr[2][3]
 global @arr2 = alloc [[i32, 5], 2], zeroinit  // int arr2[2][5] = {}
 global @arr3 = alloc [i32, 3], {1, 2, 3}      // int arr3[3] = {1, 2, 3}
@@ -103,6 +121,12 @@ Load ::= "load" SYMBOL;
 Store ::= "store" (Value | Initializer) "," SYMBOL;
 ```
 
+### 类型推断规则
+
+对于一个 `load`, 其 `SYMBOL` 的类型必须是一个指针, 设为 `*t`, 则 `load` 返回的类型为 `t`.
+
+对于一个 `store`, 其 `SYMBOL` 的类型必须是一个指针, 设为 `*t`, 则 `(Value | Initializer)` 的类型必须为 `t`.
+
 ### 示例
 
 ```koopa
@@ -116,38 +140,46 @@ store %0, @x
 ### 语法
 
 ```ebnf
-GetPointer ::= "getptr" SYMBOL "," Value ["," INT];
+GetPointer ::= "getptr" SYMBOL "," Value;
+GetElementPointer ::= "getelemptr" SYMBOL "," Value;
 ```
 
 ### 说明
 
-第一个参数是表示原指针的符号, 第二个参数是 `index`, 第三个参数是步长.
+`getptr` 用来进行指针运算, 其中 `SYMBOL` 为一个指针, `Value` 为一个偏移量. 其实际执行的操作和 C/C++ 中的指针加偏移量操作的语义一致, 即, 如果指针类型为 `*t`, 则 `getptr` 会返回该指针的内存地址加上 `sizeof(t) * offset` 后的指针.
 
-默认情况下, 步长是 1, 表示 `index` 每增加 1, `getptr` 就会向后寻址 1 个 32 位有符号整数.
+`getelemptr` 同样用来进行指针运算, 但它进行的是对数组的索引操作. `SYMBOL` 为一个**数组的指针** (并非一个数组), 设为 `*[t, len]`, 则 `getelemptr` 会返回该指针的内存地址加上 `sizeof(t) * offset` 后的指针.
+
+### 类型推断规则
+
+对于一个 `getptr`, 其 `SYMBOL` 的类型必须是一个指针, 设为 `*t`, 则 `getptr` 返回的类型为 `*t`.
+
+对于一个 `getelemptr`, 其 `SYMBOL` 的类型必须是一个数组的指针, 设为 `*[t, len]`, 则 `getelemptr` 返回的类型为 `*t`.
 
 ### 示例
 
 普通的数组:
 
 ```koopa
-// int a[10][9];
-// a[2][3] = 5
-%0 = getptr @a, 2, 9
-%1 = getptr %0, 3
+@a = alloc [[i32, 9], 10]   // int a[10][9];
+%0 = getelemptr @a, 2       // a[2][3] = 5
+%1 = getelemptr %0, 3
 store 5, %1
 ```
 
 作为参数, 省略第一维长度的数组:
 
 ```koopa
-// int a[][9]
-// a[2][3] = 5;
-%0 = getptr @a, 2, 9
-%1 = getptr %0, 3
-store 5, %1
-```
+fun ...(@a: *[i32, 9]) ... {  // ... (int a[][9])
+  ...
 
-和前一个例子没有任何区别.
+  %0 = getptr @a, 2           // a[2][3] = 5;
+  %1 = getelemptr %0, 3
+  store 5, %1
+
+  ...
+}
+```
 
 ## 双目/单目运算
 
@@ -164,6 +196,10 @@ UnaryExpr ::= UNARY_OP Value;
 
 * **双目**: `ne`, `eq`, `gt`, `lt`, `ge`, `le`, `add`, `sub`, `mul`, `div`, `mod`, `and`, `or`, `xor`, `shl`, `shr`, `sar`.
 * **单目**: `neg`, `not`.
+
+### 类型推断规则
+
+双目/单目运算操作只接受 `i32` 类型的操作数, 同时返回一个 `i32` 类型的结果.
 
 ### 示例
 
@@ -186,7 +222,11 @@ Jump ::= "jump" SYMBOL;
 
 `Branch` 的第一个参数是分支条件. 条件非 0 时, 将跳转到第二个参数代表的标号处, 否则跳转到第三个参数代表的标号处.
 
-`Jump` 语句会直接将控制流转移到 `SYMBOL` 所代表的标号处.
+`Jump` 操作会直接将控制流转移到 `SYMBOL` 所代表的标号处.
+
+### 类型推断规则
+
+`br` 操作中的 `Value` (即条件) 必须为 `i32` 类型.
 
 ### 示例
 
@@ -213,7 +253,15 @@ Return ::= "ret" [Value];
 
 ### 说明
 
-`FunCall` 括号内的内容为函数调用时传递的参数.
+`call` 中 `SYMBOL` 为函数名称, 括号内的内容为函数调用时传递的参数.
+
+`ret` 中 `Value` 为返回值. 当然, 如果一个函数没有返回值, `ret` 也可以不带 `Value`.
+
+### 类型推断规则
+
+`call` 中的 `SYMBOL` 具备函数类型, 之后括号中 `Value` 的数量和类型应当和函数参数的数量和类型一致.
+
+`ret` 中 `Value` 的类型应当和当前函数的返回类型一致.
 
 ### 示例
 
@@ -238,9 +286,7 @@ EndStatement ::= Branch | Jump | Return;
 
 ### 说明
 
-`FunDef` 用来定义一个函数, 其中的 `FunParams` 用来声明参数的名称.
-
-函数参数的类型可能是值, 也可能是一个数组的指针. 前者可以直接用, 后者只能参与内存访问或指针运算.
+`FunDef` 用来定义一个函数, 其中的 `FunParams` 用来声明参数的名称和类型.
 
 `Block` 表示基本块. 所有的基本块必须具备一个标号, 并且由 `Branch`, `Jump` 或者 `Return` 结尾.
 
@@ -255,7 +301,7 @@ fun @func (@a: i32, @b: i32): i32 {       // int func(int a, int b) {
   jump %2
 
 %2:
-  %0 = getptr @arr, @a                    //   return arr[a] + b;
+  %0 = getelemptr @arr, @a                //   return arr[a] + b;
   %1 = load %0
   %2 = add %1, @b
   store %2, %ret
@@ -314,6 +360,10 @@ Koopa 支持 SSA 形式, 但这并非是必选内容. 为了实现更多更强�
 `PhiOperand` 是一个二元组, 第一个元素表示一个值, 第二个元素表示这个值来自哪一个基本块.
 
 语义上, `Phi` 必须位于某个基本块的开头, 其中 `PhiOperand` 的数量必须和基本块前驱的数量一致, 且 `PhiOperand` 所引用的所有基本块必须和其所在基本块的前驱一一对应.
+
+### 类型推断规则
+
+`phi` 所有操作数中 `Value` 的类型必须和标注的类型一致, 同时 `SYMBOL` 表示的基本块也必须和 `phi` 所在基本块的每一个前驱一一对应.
 
 ### 示例
 
@@ -395,7 +445,7 @@ AnnoPair ::= AnnoName [":" AnnoValue];
 //! version: 0.0.1
 //! src: example.c
 
-//! type: [i32, 10]; line: 1
+//! type: *[i32, 10]; line: 1
 global @arr = alloc [i32, 10], zeroinit
 
 //! type: (i32, i32): i32; line: 2
@@ -407,7 +457,7 @@ fun @func (@a: i32, @b: i32): i32 {
 //! pred: %entry
 %2:
   //! line: 3
-  %0 /*! type: *i32 */ = getptr @arr, @a
+  %0 /*! type: *i32 */ = getelemptr @arr, @a
   %1 /*! type: i32 */ = load %0
   %2 /*! type: i32 */ = add %1, @b
   store %2, %ret
