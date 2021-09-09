@@ -290,6 +290,8 @@ EndStatement ::= Branch | Jump | Return;
 
 `Block` 表示基本块. 所有的基本块必须具备一个标号, 并且由 `Branch`, `Jump` 或者 `Return` 结尾.
 
+函数的函数体 (`FunBody`) 由一个或多个基本块组成, 其中第一个出现的基本块为入口基本块 (entry basic block), 入口基本块不能具备任何前驱 (predecessor).
+
 ### 示例
 
 ```koopa
