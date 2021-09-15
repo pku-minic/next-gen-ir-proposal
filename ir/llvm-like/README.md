@@ -1,4 +1,4 @@
-# 类 LLVM 的 IR, v0.2-d
+# 类 LLVM 的 IR, v0.3-d
 
 我们暂且把这种 IR 叫做 Koopa.
 
@@ -62,7 +62,7 @@ Aggregate ::= "{" Initializer {"," Initializer} "}";
 ### 语法
 
 ```ebnf
-SymbolDef ::= SYMBOL "=" (MemoryDeclaration | Load | GetPointer | BinaryExpr | UnaryExpr | FunCall | Phi);
+SymbolDef ::= SYMBOL "=" (MemoryDeclaration | Load | GetPointer | BinaryExpr | FunCall | Phi);
 GlobalSymbolDef ::= "global" SYMBOL "=" GlobalMemoryDeclaration;
 ```
 
@@ -181,32 +181,34 @@ fun ...(@a: *[i32, 9]) ... {  // ... (int a[][9])
 }
 ```
 
-## 双目/单目运算
+## 二元运算
 
 ### 语法
 
 ```ebnf
 BinaryExpr ::= BINARY_OP Value "," Value;
-UnaryExpr ::= UNARY_OP Value;
 ```
 
 ### 说明
 
-支持的操作:
+支持的二元操作: `ne`, `eq`, `gt`, `lt`, `ge`, `le`, `add`, `sub`, `mul`, `div`, `mod`, `and`, `or`, `xor`, `shl`, `shr`, `sar`.
 
-* **双目**: `ne`, `eq`, `gt`, `lt`, `ge`, `le`, `add`, `sub`, `mul`, `div`, `mod`, `and`, `or`, `xor`, `shl`, `shr`, `sar`.
-* **单目**: `neg`, `not`.
+不支持一元操作的原因是, 目前已知有意义的一元操作均可用二元操作表示:
+
+* **变补 (取负数)**: 0 减去操作数.
+* **按位取反**: 操作数异或全 1 (-1).
+* **逻辑取反**: 操作数和 0 比较相等.
 
 ### 类型推断规则
 
-双目/单目运算操作只接受 `i32` 类型的操作数, 同时返回一个 `i32` 类型的结果.
+二元运算操作只接受 `i32` 类型的操作数, 同时返回一个 `i32` 类型的结果.
 
 ### 示例
 
 ```koopa
 %2 = add %0, %1
 %3 = mul %0, %2
-%4 = neg %3
+%4 = sub 0, %3
 ```
 
 ## 分支和跳转
@@ -326,7 +328,7 @@ FunDeclParams ::= Type {"," Type};
 
 ### 说明
 
-`FunDecl` 可以声明一个函数. 此处的 “声明” 与 C/C++ 里的 `extern` 声明含义类似, 指这个函数点定义并不在当前文件内, 而在另外的文件中. 如果当前文件表示的程序需要调用另一个文件中定义的函数, 则必须在 Koopa IR 中显式的写明这个函数的声明.
+`FunDecl` 可以声明一个函数. 此处的 “声明” 与 C/C++ 里的 `extern` 声明含义类似, 指这个函数的定义并不在当前文件内, 而在另外的文件中. 如果当前文件表示的程序需要调用另一个文件中定义的函数, 则必须在 Koopa IR 中显式的写明这个函数的声明.
 
 SysY 的库函数, 如 `getint`/`putint`, 就是一类典型的需要被声明的函数.
 
