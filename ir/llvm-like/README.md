@@ -1,4 +1,4 @@
-# 类 LLVM 的 IR, v0.3-d
+# 类 LLVM 的 IR, v0.4-d
 
 我们暂且把这种 IR 叫做 Koopa.
 
@@ -37,7 +37,7 @@ Koopa 的函数/表达式/值可具备以下类型:
 * **指针**: 可被表示为 `*` + `BaseType` 的形式, 如 `*i32`, `**i32`.
 * **函数**: 可被表示为 `(BaseType, ...): BaseType` 或 `(BaseType, ...)` 的形式, 如 `(i32, i32): i32`, `()`, 后者表示的函数不具备返回值.
 
-Koopa 是一种强类型 IR, 在书写时只需要为内存分配/函数参数/函数返回值/Phi 函数进行类型标注, 其余值的类型将由解析器自动推断. 此外, 在解析 Koopa 时解析器应当检查 IR 的类型, 如发现类型问题, 应报错并退出.
+Koopa 是一种强类型 IR, 在书写时只需要为内存分配/函数参数/函数返回值/基本块参数进行类型标注, 其余值的类型将由解析器自动推断. 此外, 在解析 Koopa 时解析器应当检查 IR 的类型, 如发现类型问题, 应报错并退出.
 
 ## 值
 
@@ -62,7 +62,7 @@ Aggregate ::= "{" Initializer {"," Initializer} "}";
 ### 语法
 
 ```ebnf
-SymbolDef ::= SYMBOL "=" (MemoryDeclaration | Load | GetPointer | BinaryExpr | FunCall | Phi);
+SymbolDef ::= SYMBOL "=" (MemoryDeclaration | Load | GetPointer | BinaryExpr | FunCall);
 GlobalSymbolDef ::= "global" SYMBOL "=" GlobalMemoryDeclaration;
 ```
 
@@ -346,28 +346,34 @@ fun @main(): i32 {
 }
 ```
 
-## Phi 函数
+## Koopa IR 的 SSA 扩展
 
 ### 语法
 
+该形式需要扩展之前定义的 `Branch`, `Jump` 以及 `Block` 语法:
+
 ```ebnf
-Phi ::= "phi" Type PhiOperand {"," PhiOperand};
-PhiOperand ::= "(" Value, SYMBOL ")";
+Branch ::= "br" Value "," SYMBOL [BlockArgList] "," SYMBOL [BlockArgList];
+Jump ::= "jump" SYMBOL [BlockArgList];
+BlockArgList ::= "(" Value {"," Value} ")";
+
+Block ::= SYMBOL [BlockParamList] ":" {Statement} EndStatement;
+BlockParamList ::= "(" SYMBOL ":" Type {"," SYMBOL ":" Type} ")";
 ```
 
 ### 说明
 
-不具备 Phi 函数的 Koopa 已经足够作为一个编译器的 IR 使用了, 但为了让 Koopa 兼容 SSA 形式, 我们可以让其支持 Phi 函数.
+基础形式的 Koopa 已经足够作为一个编译器的 IR 使用了, 但为了让 Koopa 兼容 SSA 形式, 我们推出了 SSA 扩展.
 
 Koopa 支持 SSA 形式, 但这并非是必选内容. 为了实现更多更强大的优化, 你可以选择将 Koopa 转换到 SSA 形式. 但我觉得这部分内容不应该放在本科编译原理的课程实践中, 也许可以针对本科生再开一门和编译优化相关的课程.
 
-`PhiOperand` 是一个二元组, 第一个元素表示一个值, 第二个元素表示这个值来自哪一个基本块.
+我们并没有选择让 SSA 的 Koopa 采用 Phi 函数的形式, 虽然我们之前确实这么做了, 但权衡之下, 我们决定采用另一种等价的形式: 基本块参数 (basic block arguments). 相比传统的 Phi 函数, 这种形式在实现上要简单得多, 且在不削弱表达能力的情况下, 可以更好的分离数据流和控制流. 关于 SSA 形式设计的讨论, 请参考 MaxXing 的[这篇博文](http://blog.maxxsoft.net/index.php/archives/143/).
 
-语义上, `Phi` 必须位于某个基本块的开头, 其中 `PhiOperand` 的数量必须和基本块前驱的数量一致, 且 `PhiOperand` 所引用的所有基本块必须和其所在基本块的前驱一一对应.
+在该形式下, 原先的 Phi 语义使用基本块参数进行表示. 在进入带参数基本块时, 前驱的基本块的最后一条转移指令中必须传递基本块的实际参数. 基本块中的指令可以通过使用形式参数的方式来使用这些传入的值.
 
 ### 类型推断规则
 
-`phi` 所有操作数中 `Value` 的类型必须和标注的类型一致, 同时 `SYMBOL` 表示的基本块也必须和 `phi` 所在基本块的每一个前驱一一对应.
+传入基本块的实际参数的数量和类型, 应当和基本块定义时指定的形式参数的数量和类型一致.
 
 ### 示例
 
@@ -379,14 +385,13 @@ Koopa 支持 SSA 形式, 但这并非是必选内容. 为了实现更多更强�
 
 %if_then:
   %a_1 = add %a_0, 5
-  jump %if_end
+  jump %if_end(%a_1)
 
 %if_else:
   %a_2 = sub %a_0, 7
-  jump %if_end
+  jump %if_end(%a_2)
 
-%if_end:
-  %a_3 = phi i32 (%a_1, %if_then), (%a_2, %if_else)
+%if_end(%a_3: i32):
   ret %a_3
 ```
 
